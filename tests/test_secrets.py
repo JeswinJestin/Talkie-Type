@@ -139,3 +139,98 @@ def test_delete_handles_fsync_errors(tmp_path: Path, logger: logging.Logger, mon
     monkeypatch.setattr(os, "fsync", lambda *_a, **_k: (_ for _ in ()).throw(OSError("x")), raising=True)
     monkeypatch.setattr(os, "close", lambda *_a, **_k: (_ for _ in ()).throw(OSError("x")), raising=True)
     delete_groq_api_key(logger=logger, base_dir=tmp_path)
+
+
+def test_file_based_master_key_fallback_when_keyring_missing(tmp_path: Path, logger: logging.Logger, monkeypatch: pytest.MonkeyPatch) -> None:
+    import voicetype.secrets as secrets
+
+    monkeypatch.setattr(secrets, "_get_keyring", lambda: None)
+    set_groq_api_key(api_key="gsk_secret", logger=logger, base_dir=tmp_path)
+    assert (tmp_path / "master_key_v1.key").exists()
+    assert get_groq_api_key(logger=logger, base_dir=tmp_path) == "gsk_secret"
+
+
+def test_file_based_master_key_reused_and_regenerated_on_corruption(tmp_path: Path, logger: logging.Logger, monkeypatch: pytest.MonkeyPatch) -> None:
+    import voicetype.secrets as secrets
+
+    monkeypatch.setattr(secrets, "_get_keyring", lambda: None)
+
+    set_groq_api_key(api_key="first", logger=logger, base_dir=tmp_path)
+    key_path = tmp_path / "master_key_v1.key"
+    key1 = key_path.read_text(encoding="utf-8")
+
+    set_groq_api_key(api_key="second", logger=logger, base_dir=tmp_path)
+    key2 = key_path.read_text(encoding="utf-8")
+    assert key1 == key2
+    assert get_groq_api_key(logger=logger, base_dir=tmp_path) == "second"
+
+    key_path.write_text("not-a-key\n", encoding="utf-8")
+    set_groq_api_key(api_key="third", logger=logger, base_dir=tmp_path)
+    key3 = key_path.read_text(encoding="utf-8")
+    assert key3 != "not-a-key\n"
+    assert get_groq_api_key(logger=logger, base_dir=tmp_path) == "third"
+
+
+def test_set_rejects_empty_api_key(tmp_path: Path, logger: logging.Logger, monkeypatch: pytest.MonkeyPatch) -> None:
+    import voicetype.secrets as secrets
+
+    monkeypatch.setattr(secrets, "_get_keyring", lambda: None)
+    with pytest.raises(ValueError):
+        set_groq_api_key(api_key="   ", logger=logger, base_dir=tmp_path)
+
+
+def test_get_returns_empty_on_decrypt_failure(tmp_path: Path, logger: logging.Logger, monkeypatch: pytest.MonkeyPatch) -> None:
+    import voicetype.secrets as secrets
+
+    monkeypatch.setattr(secrets, "_get_keyring", lambda: None)
+    set_groq_api_key(api_key="gsk_secret", logger=logger, base_dir=tmp_path)
+    (tmp_path / "master_key_v1.key").write_text("invalid\n", encoding="utf-8")
+    assert get_groq_api_key(logger=logger, base_dir=tmp_path) == ""
+
+
+def test_delete_handles_unlink_failure(tmp_path: Path, logger: logging.Logger, monkeypatch: pytest.MonkeyPatch) -> None:
+    import voicetype.secrets as secrets
+
+    monkeypatch.setattr(secrets, "_get_keyring", lambda: None)
+    set_groq_api_key(api_key="gsk_secret", logger=logger, base_dir=tmp_path)
+    p = tmp_path / "secrets.json"
+    assert p.exists()
+
+    orig = Path.unlink
+
+    def boom(self: Path, *args, **kwargs):
+        raise OSError("x")
+
+    monkeypatch.setattr(Path, "unlink", boom, raising=True)
+    delete_groq_api_key(logger=logger, base_dir=tmp_path)
+    monkeypatch.setattr(Path, "unlink", orig, raising=True)
+
+
+def test_keyring_import_failure_falls_back_to_file(tmp_path: Path, logger: logging.Logger, monkeypatch: pytest.MonkeyPatch) -> None:
+    import builtins
+
+    import voicetype.secrets as secrets
+
+    orig_import = builtins.__import__
+
+    def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "keyring":
+            raise ModuleNotFoundError(name)
+        return orig_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+    set_groq_api_key(api_key="gsk_secret", logger=logger, base_dir=tmp_path)
+    assert (tmp_path / "master_key_v1.key").exists()
+    monkeypatch.setattr(builtins, "__import__", orig_import)
+
+
+def test_file_master_key_empty_file_regenerated_and_chmod_failure_swallowed(tmp_path: Path, logger: logging.Logger, monkeypatch: pytest.MonkeyPatch) -> None:
+    import voicetype.secrets as secrets
+
+    monkeypatch.setattr(secrets, "_get_keyring", lambda: None)
+    key_path = tmp_path / "master_key_v1.key"
+    key_path.write_text("\n", encoding="utf-8")
+
+    monkeypatch.setattr(os, "chmod", lambda *_a, **_k: (_ for _ in ()).throw(OSError("x")), raising=True)
+    set_groq_api_key(api_key="gsk_secret", logger=logger, base_dir=tmp_path)
+    assert key_path.read_text(encoding="utf-8").strip()

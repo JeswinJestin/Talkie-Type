@@ -82,39 +82,90 @@ def _check_audio_open() -> CheckResult:
         def cb(indata, frames, time_info, status):
             return None
 
-        rates: list[int] = []
+        candidates: list[int | None] = [None]
         try:
-            info = sd.query_devices(kind="input")
-            default_rate = info.get("default_samplerate") if isinstance(info, dict) else None
-            if default_rate:
-                rates.append(int(float(default_rate)))
+            default_dev = sd.default.device[0] if isinstance(sd.default.device, (list, tuple)) else None
+            if isinstance(default_dev, int):
+                candidates.append(default_dev)
         except Exception:
             pass
-        rates.extend([48000, 44100, 16000])
 
-        seen: set[int] = set()
-        attempts: list[int] = []
-        for r in rates:
-            if r <= 0 or r in seen:
-                continue
-            seen.add(r)
-            attempts.append(r)
+        try:
+            hostapis = list(sd.query_hostapis())
+        except Exception:
+            hostapis = []
 
-        last: Exception | None = None
-        for rate in attempts:
-            try:
-                stream = sd.InputStream(samplerate=rate, channels=1, dtype="float32", callback=cb)
-                stream.start()
-                time.sleep(0.05)
-                stream.stop()
-                stream.close()
-                return CheckResult("microphone_stream", True, f"opened at {rate} Hz")
-            except Exception as e:
-                last = e
+        if hostapis:
+            preferred_names = ["Windows WASAPI", "Windows DirectSound", "Windows WDM-KS", "MME"]
+            by_name: dict[str, int] = {}
+            for idx, api in enumerate(hostapis):
                 try:
-                    stream.close()  # type: ignore[name-defined]
+                    name = api.get("name") if isinstance(api, dict) else None
+                    if isinstance(name, str) and name:
+                        by_name[name] = idx
+                except Exception:
+                    continue
+
+            for n in preferred_names:
+                idx = by_name.get(n)
+                if idx is None:
+                    continue
+                try:
+                    dev_idx = hostapis[idx].get("default_input_device")  # type: ignore[index]
+                    if isinstance(dev_idx, int):
+                        candidates.append(dev_idx)
                 except Exception:
                     pass
+
+        unique_candidates: list[int | None] = []
+        seen_dev: set[int] = set()
+        for d in candidates:
+            if d is None:
+                if None not in unique_candidates:
+                    unique_candidates.append(None)
+                continue
+            if d in seen_dev:
+                continue
+            seen_dev.add(d)
+            unique_candidates.append(d)
+
+        base_rates = [48000, 44100, 16000]
+
+        last: Exception | None = None
+        for dev in unique_candidates:
+            rates: list[int] = []
+            if dev is not None:
+                try:
+                    info = sd.query_devices(dev, kind="input")
+                    default_rate = info.get("default_samplerate") if isinstance(info, dict) else None
+                    if default_rate:
+                        rates.append(int(float(default_rate)))
+                except Exception:
+                    pass
+            rates.extend(base_rates)
+
+            seen_rate: set[int] = set()
+            for rate in rates:
+                if rate <= 0 or rate in seen_rate:
+                    continue
+                seen_rate.add(rate)
+                try:
+                    kwargs = {"samplerate": rate, "channels": 1, "dtype": "float32", "callback": cb}
+                    if dev is not None:
+                        kwargs["device"] = dev
+                    stream = sd.InputStream(**kwargs)
+                    stream.start()
+                    time.sleep(0.05)
+                    stream.stop()
+                    stream.close()
+                    dev_label = "default" if dev is None else str(dev)
+                    return CheckResult("microphone_stream", True, f"opened (device {dev_label}) at {rate} Hz")
+                except Exception as e:
+                    last = e
+                    try:
+                        stream.close()  # type: ignore[name-defined]
+                    except Exception:
+                        pass
 
         if last is not None:
             return CheckResult("microphone_stream", False, f"{type(last).__name__}: {last}")

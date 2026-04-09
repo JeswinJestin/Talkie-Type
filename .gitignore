@@ -18,6 +18,8 @@ failed_recordings/
 transcripts/
 secrets.json
 secrets.json.pending
+master_key_v1.key
+master_key_v1.key.pending
 
 build/
 dist/

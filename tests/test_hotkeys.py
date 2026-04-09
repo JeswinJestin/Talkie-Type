@@ -86,6 +86,46 @@ def test_hold_hotkey_listener_hold_mode_transitions(monkeypatch: pytest.MonkeyPa
     assert toggled["n"] == 0
 
 
+@pytest.mark.parametrize("seconds,repeat_hz", [(1, 30), (5, 30), (30, 30)])
+def test_hold_hotkey_listener_hold_mode_ignores_repeated_keydown(monkeypatch: pytest.MonkeyPatch, seconds: int, repeat_hz: int) -> None:
+    class FakeKeyboard:
+        KEY_DOWN = "down"
+        KEY_UP = "up"
+
+        def hook(self, _fn):
+            return "hook"
+
+        def unhook(self, _handle):
+            return None
+
+    monkeypatch.setattr(hotkeys, "keyboard", FakeKeyboard())
+
+    started = {"n": 0}
+    stopped = {"n": 0}
+
+    listener = hotkeys.HoldHotkeyListener(
+        cfg=hotkeys.HotkeyConfig(hold_combo="ctrl+space", hands_free_enabled=False),
+        logger=types.SimpleNamespace(debug=lambda *a, **k: None, exception=lambda *a, **k: None),
+        on_start=lambda: started.__setitem__("n", started["n"] + 1),
+        on_stop=lambda: stopped.__setitem__("n", stopped["n"] + 1),
+        on_toggle=lambda: None,
+    )
+
+    listener._handle_event(types.SimpleNamespace(event_type="down", name="ctrl"))  # type: ignore[attr-defined]
+    listener._handle_event(types.SimpleNamespace(event_type="down", name="space"))  # type: ignore[attr-defined]
+    assert started["n"] == 1
+    assert stopped["n"] == 0
+
+    repeats = int(seconds * repeat_hz)
+    for _ in range(repeats):
+        listener._handle_event(types.SimpleNamespace(event_type="down", name="space"))  # type: ignore[attr-defined]
+    assert started["n"] == 1
+    assert stopped["n"] == 0
+
+    listener._handle_event(types.SimpleNamespace(event_type="up", name="space"))  # type: ignore[attr-defined]
+    assert stopped["n"] == 1
+
+
 def test_hold_hotkey_listener_hands_free_toggle(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeKeyboard:
         KEY_DOWN = "down"
