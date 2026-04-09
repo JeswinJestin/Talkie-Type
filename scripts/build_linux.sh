@@ -8,4 +8,4 @@ python3 -m venv .venv
 python -m pip install -r requirements.txt
 python -m pip install -r requirements-dev.txt
 
-python -m PyInstaller --noconsole --name TalkieType --clean --noconfirm -m voicetype
+python -m PyInstaller --noconsole --name TalkieType --clean --noconfirm voicetype/__main__.py

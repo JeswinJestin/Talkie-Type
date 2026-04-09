@@ -9,4 +9,13 @@ $src = Join-Path (Resolve-Path "dist") "TalkieType"
 $zip = Join-Path (Resolve-Path "dist_release") "TalkieType-windows.zip"
 
 if (Test-Path $zip) { Remove-Item -Force $zip }
-Compress-Archive -Path "$src\*" -DestinationPath $zip
+$maxAttempts = 8
+for ($i = 1; $i -le $maxAttempts; $i++) {
+  try {
+    Compress-Archive -Path "$src\*" -DestinationPath $zip -Force
+    break
+  } catch {
+    if ($i -eq $maxAttempts) { throw }
+    Start-Sleep -Milliseconds 500
+  }
+}

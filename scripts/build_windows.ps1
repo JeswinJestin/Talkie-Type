@@ -10,4 +10,4 @@ if (-not (Test-Path ".venv\\Scripts\\python.exe")) {
 .\\.venv\\Scripts\\python.exe -m pip install -r requirements.txt
 .\\.venv\\Scripts\\python.exe -m pip install -r requirements-dev.txt
 
-.\\.venv\\Scripts\\python.exe -m PyInstaller --noconsole --name TalkieType --clean --noconfirm --collect-all pystray --collect-all PIL -m voicetype
+.\\.venv\\Scripts\\python.exe -m PyInstaller --noconsole --name TalkieType --clean --noconfirm --collect-all pystray --collect-all PIL voicetype\\__main__.py

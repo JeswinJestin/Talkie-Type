@@ -50,7 +50,7 @@ Talkie Type is a Windows/macOS/Linux system-tray app that records your microphon
 - Double-click `run.bat`, or run:
 
   ```powershell
-  .\.venv\Scripts\python.exe -m voicetype
+  .\.venv\Scripts\python.exe -m talkietype      
   ```
 
 On manual launch, Talkie Type opens a window showing today’s transcripts with live updates. Use the tray menu to control startup launch and hotkey mode.
@@ -83,7 +83,7 @@ Right-click the tray icon and toggle **Hands-free mode**:
 
 Talkie Type creates a config file on first run:
 
-- `%APPDATA%\TalkieType\config.json` (legacy: `%APPDATA%\VoiceType\config.json`)
+- `%APPDATA%\TalkieType\config.json` (legacy: `%APPDATA%\TalkieType\config.json`)
 
 Useful options:
 
@@ -147,6 +147,12 @@ make ship
 ```
 
 This runs tests, creates a `v<version>` tag from `voicetype.__version__`, and pushes the tag to `origin`, which triggers the GitHub Release workflow.
+
+### Release troubleshooting
+
+- **Build fails with PyInstaller argument errors**: ensure the build scripts pass a script path like `voicetype/__main__.py` to PyInstaller (not `-m voicetype`, which is a different flag in PyInstaller).
+- **Windows zip packaging fails with “file is being used by another process”**: this can happen immediately after PyInstaller finishes; the Windows packaging script retries `Compress-Archive` a few times.
+- **Missing release assets**: the Release workflow validates that `dist_release/` contains the expected platform artifact before uploading.
 
 ### Hotkey doesn’t trigger
 

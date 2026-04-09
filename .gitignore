@@ -18,3 +18,8 @@ failed_recordings/
 transcripts/
 secrets.json
 secrets.json.pending
+
+build/
+dist/
+dist_release/
+*.spec

@@ -17,14 +17,17 @@ jobs:
         include:
           - os: windows-latest
             artifact_name: TalkieType-windows
+            required_assets: TalkieType-windows.zip
             build_cmd: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\\build_windows.ps1
             package_cmd: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\\package_windows.ps1
           - os: macos-latest
             artifact_name: TalkieType-macos
+            required_assets: TalkieType-macos.zip
             build_cmd: bash scripts/build_macos.sh
             package_cmd: bash scripts/package_macos.sh
           - os: ubuntu-latest
             artifact_name: TalkieType-linux
+            required_assets: TalkieType-linux.tar.gz
             build_cmd: bash scripts/build_linux.sh
             package_cmd: bash scripts/package_linux.sh
 
@@ -37,6 +40,9 @@ jobs:
         run: ${{ matrix.build_cmd }}
       - name: Package
         run: ${{ matrix.package_cmd }}
+      - name: Verify package output
+        run: |
+          python -c "import os; req='${{ matrix.required_assets }}'.split(';'); out=os.listdir('dist_release') if os.path.isdir('dist_release') else []; missing=[r for r in req if r and r not in out]; print('dist_release:', out); assert not missing, f'Missing required assets: {missing}'"
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
