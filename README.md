@@ -138,6 +138,24 @@ Use the tray menu: **Open logs**
 - CI runs on pull requests and `main` pushes.
 - Tag pushes like `v0.1.0` trigger a multi-OS build and publish assets to GitHub Releases.
 
+### Local deploy / health check
+
+Run the health checker to validate your environment (Python, dependencies, mic device, keyring, and config paths):
+
+```powershell
+.\.venv\Scripts\python.exe scripts\doctor.py --strict
+```
+
+### Security checks (local + CI)
+
+- CI runs a dependency vulnerability scan and a static security scan.
+- Run locally:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip_audit -r requirements.txt
+.\.venv\Scripts\python.exe -m bandit -q -r voicetype -x voicetype/ui.py,voicetype/tray.py --severity-level medium --confidence-level medium
+```
+
 ### Ship command
 
 On a clean git working tree:

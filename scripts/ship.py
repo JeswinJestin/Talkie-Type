@@ -46,14 +46,26 @@ def _ensure_pytest(python: str) -> None:
         return
     raise SystemExit("pytest is not installed. Install dev dependencies (requirements-dev.txt) and retry.")
 
+def _ensure_deps(python: str) -> None:
+    root = _repo_root()
+    req = root / "requirements.txt"
+    dev = root / "requirements-dev.txt"
+    if req.exists():
+        _run([python, "-m", "pip", "install", "-r", str(req)])
+    if dev.exists():
+        _run([python, "-m", "pip", "install", "-r", str(dev)])
+
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--tag", default="")
     parser.add_argument("--skip-tests", action="store_true")
+    parser.add_argument("--ensure-deps", action="store_true")
     args = parser.parse_args()
 
     python = _venv_python() or sys.executable
+    if args.ensure_deps:
+        _ensure_deps(python)
     if not args.skip_tests:
         _ensure_pytest(python)
         _run([python, "-m", "pytest", "-q"])
