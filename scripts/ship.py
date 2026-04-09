@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import os
+from pathlib import Path
 import subprocess
 import sys
 
@@ -14,14 +16,47 @@ def _capture(cmd: list[str]) -> str:
     return out.strip()
 
 
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parent.parent
+
+
+def _venv_python() -> str | None:
+    root = _repo_root()
+    candidates = []
+    if os.name == "nt":
+        candidates.append(root / ".venv" / "Scripts" / "python.exe")
+    candidates.append(root / ".venv" / "bin" / "python")
+    for p in candidates:
+        if p.exists():
+            return str(p)
+    return None
+
+
+def _ensure_pytest(python: str) -> None:
+    try:
+        subprocess.run([python, "-c", "import pytest"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return
+    except Exception:
+        pass
+
+    root = _repo_root()
+    req = root / "requirements-dev.txt"
+    if req.exists():
+        _run([python, "-m", "pip", "install", "-r", str(req)])
+        return
+    raise SystemExit("pytest is not installed. Install dev dependencies (requirements-dev.txt) and retry.")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--tag", default="")
     parser.add_argument("--skip-tests", action="store_true")
     args = parser.parse_args()
 
+    python = _venv_python() or sys.executable
     if not args.skip_tests:
-        _run([sys.executable, "-m", "pytest", "-q"])
+        _ensure_pytest(python)
+        _run([python, "-m", "pytest", "-q"])
 
     status = _capture(["git", "status", "--porcelain"])
     if status:
@@ -30,9 +65,9 @@ def main() -> int:
     if args.tag:
         tag = args.tag
     else:
-        from voicetype import __version__
+        out = subprocess.check_output([python, "-c", "import voicetype; print(voicetype.__version__)"], text=True).strip()
 
-        tag = f"v{__version__}"
+        tag = f"v{out}"
 
     existing = _capture(["git", "tag", "--list", tag])
     if existing:
