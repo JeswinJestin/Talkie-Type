@@ -8,6 +8,9 @@ on:
 permissions:
   contents: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -35,7 +38,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: "3.12"
       - name: System deps (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -46,6 +49,11 @@ jobs:
         run: |
           brew update
           brew install portaudio
+      - name: Diagnostics
+        run: |
+          python -V
+          python -c "import platform; print(platform.platform())"
+          python -m pip --version
       - name: Build
         run: ${{ matrix.build_cmd }}
       - name: Package
