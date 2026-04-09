@@ -1,0 +1,19 @@
+[run]
+branch = True
+source = voicetype
+omit =
+    voicetype/app.py
+    voicetype/ui.py
+    voicetype/tray.py
+    voicetype/recorder.py
+    voicetype/transcriber.py
+    voicetype/typer.py
+    voicetype/notifier.py
+    voicetype/logging_setup.py
+    voicetype/indicator.py
+    voicetype/tempfile_utils.py
+    voicetype/__main__.py
+
+[report]
+fail_under = 90
+show_missing = True
