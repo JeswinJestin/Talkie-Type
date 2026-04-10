@@ -64,11 +64,11 @@ def test_recorder_writes_valid_wav_for_durations(tmp_path: Path, monkeypatch: py
     monkeypatch.setattr(recorder_mod.sd, "InputStream", lambda **kw: _FakeStream(**kw))
 
     rec = recorder_mod.MicrophoneRecorder(sample_rate_hz=16000, channels=1, vad_rms_threshold=0.001, logger=recorder_mod.logging.getLogger("t"))  # type: ignore[attr-defined]
-    rec.start()
+    out = tmp_path / "out.wav"
+    rec.start(wav_path=out)
     assert _FakeStream.last is not None
     _FakeStream.last.emit_seconds(seconds)
 
-    out = tmp_path / "out.wav"
     stats = rec.stop_to_wav(out)
     assert out.exists()
     assert stats.frames > 0

@@ -4,7 +4,7 @@ Talkie Type is a Windows/macOS/Linux system-tray app that records your microphon
 
 ## Features
 
-- Global low-level hotkey (default toggle: Ctrl+Shift+R; optional hold-to-talk: Ctrl+Space)
+- Global low-level hotkey (default toggle: Ctrl+Shift+Win+U; Ctrl+Space is deprecated)
 - Floating draggable toggle widget with recording state + level meter
 - Tray icon state changes + notifications
 - Groq API transcription using Whisper Large v3
@@ -57,16 +57,16 @@ On manual launch, Talkie Type opens a window showing today’s transcripts with 
 
 ## Usage
 
-- Press **Ctrl+Shift+R** to toggle recording ON/OFF
-- (Optional) Hold **Ctrl+Space** to record (if you disable “Hands-free mode” in the tray)
+- Press **Ctrl+Shift+Win+U** to toggle recording ON/OFF
+- Ctrl+Space is deprecated and is not used by default
 - When transcription completes, Talkie Type types the text into the currently focused window
 - Every successful recording stop appends `{"ts":..., "text":...}` to today’s JSONL file
 
 ### Hotkey alternatives
 
-If Ctrl+Space conflicts with other software, change the hotkey in the config file to one of these common options:
+Ctrl+Space is deprecated. Change the hotkey in the config file if needed:
 
-- `ctrl+shift+r`
+- `ctrl+shift+windows+u`
 - `f6`
 - `ctrl+alt+space`
 
@@ -87,8 +87,8 @@ Talkie Type creates a config file on first run:
 
 Useful options:
 
-- `toggle_hotkey`: e.g. `"ctrl+shift+r"`, `"f6"`
-- `hold_hotkey`: e.g. `"ctrl+space"`
+- `toggle_hotkey`: e.g. `"ctrl+shift+windows+u"`, `"f6"`
+- `hold_hotkey`: deprecated (ignored)
 - `hands_free_enabled`: `true/false` (toggle vs hold-to-talk)
 - `autostart_enabled`: `true/false` (Windows startup launch)
 - `sample_rate_hz`: default `16000`
@@ -176,7 +176,7 @@ This runs tests, creates a `v<version>` tag from `voicetype.__version__`, and pu
 
 - Some apps (games, remote desktop tools) can intercept low-level keyboard hooks.
 - If you run into permissions issues, try running your terminal “as Administrator” and re-testing.
-- Try switching to another hotkey such as `f6` or `ctrl+shift+r`.
+- Try switching to another hotkey such as `f6` or `ctrl+shift+windows+u`.
 
 ### Microphone errors / “No audio captured”
 

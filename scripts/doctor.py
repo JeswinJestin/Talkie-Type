@@ -153,6 +153,16 @@ def _check_audio_open() -> CheckResult:
                     kwargs = {"samplerate": rate, "channels": 1, "dtype": "float32", "callback": cb}
                     if dev is not None:
                         kwargs["device"] = dev
+                        if os.name == "nt" and hasattr(sd, "WasapiSettings"):
+                            try:
+                                info = sd.query_devices(dev, kind="input")
+                                hostapi_idx = info.get("hostapi") if isinstance(info, dict) else None
+                                api = sd.query_hostapis(int(hostapi_idx)) if hostapi_idx is not None else None
+                                name = api.get("name") if isinstance(api, dict) else None
+                                if name == "Windows WASAPI":
+                                    kwargs["extra_settings"] = sd.WasapiSettings(exclusive=False)
+                            except Exception:
+                                pass
                     stream = sd.InputStream(**kwargs)
                     stream.start()
                     time.sleep(0.05)

@@ -11,6 +11,7 @@ def test_parse_combo_normalizes() -> None:
     assert hotkeys.parse_combo("Ctrl+Space") == {"ctrl", "space"}
     assert hotkeys.parse_combo("control+  space") == {"ctrl", "space"}
     assert hotkeys.parse_combo("CTRL+SHIFT+R") == {"ctrl", "shift", "r"}
+    assert hotkeys.parse_combo("ctrl+shift+windows+u") == {"ctrl", "shift", "windows", "u"}
 
 
 def test_toggle_hotkey_listener_registers_and_updates(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -252,3 +253,42 @@ def test_toggle_hotkey_listener_start_failure_propagates(monkeypatch: pytest.Mon
     t = hotkeys.ToggleHotkeyListener(hotkey="f6", logger=types.SimpleNamespace(debug=lambda *a, **k: None, exception=lambda *a, **k: None), on_toggle=lambda: None)  # type: ignore[arg-type]
     with pytest.raises(RuntimeError):
         t.start()
+
+
+def test_hotkeys_keyboard_missing_raises_on_start(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(hotkeys, "keyboard", None)
+    t = hotkeys.ToggleHotkeyListener(hotkey="ctrl+shift+windows+u", logger=types.SimpleNamespace(debug=lambda *a, **k: None, exception=lambda *a, **k: None), on_toggle=lambda: None)  # type: ignore[arg-type]
+    with pytest.raises(RuntimeError):
+        t.start()
+
+    h = hotkeys.HoldHotkeyListener(
+        cfg=hotkeys.HotkeyConfig(hold_combo="ctrl+alt+u", hands_free_enabled=False),
+        logger=types.SimpleNamespace(debug=lambda *a, **k: None, exception=lambda *a, **k: None),
+        on_start=lambda: None,
+        on_stop=lambda: None,
+        on_toggle=lambda: None,
+    )
+    with pytest.raises(RuntimeError):
+        h.start()
+
+
+def test_toggle_hotkey_listener_debounces_repeats(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[str] = []
+
+    class FakeKeyboard:
+        def add_hotkey(self, *_a, **_k):
+            return "handle"
+
+        def remove_hotkey(self, *_a, **_k):
+            return None
+
+    monkeypatch.setattr(hotkeys, "keyboard", FakeKeyboard())
+
+    def on_toggle():
+        calls.append("toggle")
+
+    t = hotkeys.ToggleHotkeyListener(hotkey="ctrl+shift+windows+u", logger=types.SimpleNamespace(debug=lambda *a, **k: None, exception=lambda *a, **k: None), on_toggle=on_toggle)  # type: ignore[arg-type]
+    t.start()
+    t._safe_toggle()  # type: ignore[attr-defined]
+    t._safe_toggle()  # type: ignore[attr-defined]
+    assert calls == ["toggle"]

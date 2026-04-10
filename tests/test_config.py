@@ -36,3 +36,32 @@ def test_config_path_falls_back_when_appdata_missing(tmp_path: Path, monkeypatch
     monkeypatch.delenv("APPDATA", raising=False)
     p = config_path()
     assert p.name == "config.json"
+
+
+def test_config_migrates_deprecated_hotkey_defaults(tmp_path: Path, monkeypatch) -> None:
+    import json
+
+    monkeypatch.setenv("APPDATA", str(tmp_path))
+    p = config_path()
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(
+        json.dumps(
+            {
+                "hold_hotkey": "ctrl+space",
+                "toggle_hotkey": "ctrl+shift+r",
+                "hands_free_enabled": False,
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    cfg = load_config()
+    assert cfg.toggle_hotkey == "ctrl+shift+windows+u"
+    assert cfg.hold_hotkey == ""
+    assert cfg.hands_free_enabled is True
+
+    persisted = json.loads(p.read_text(encoding="utf-8"))
+    assert persisted["toggle_hotkey"] == "ctrl+shift+windows+u"
+    assert persisted["hold_hotkey"] == ""
+    assert persisted["hands_free_enabled"] is True
