@@ -138,6 +138,16 @@ Use the tray menu: **Open logs**
 - CI runs on pull requests and `main` pushes.
 - Tag pushes like `v0.1.0` trigger a multi-OS build and publish assets to GitHub Releases.
 
+### Download (no-code)
+
+To run without installing Python, download a built release asset from the GitHub Releases page:
+
+- Windows: `TalkieType-windows.zip`
+- macOS: `TalkieType-macos.zip`
+- Linux: `TalkieType-linux.tar.gz`
+
+If you only see “Source code (zip)”, the release build failed and no runnable app was published.
+
 ### Local deploy / health check
 
 Run the health checker to validate your environment (Python, dependencies, mic device, keyring, and config paths):
