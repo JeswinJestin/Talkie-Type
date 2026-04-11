@@ -241,7 +241,6 @@ def main() -> int:
         _check_import("keyboard"),
         _check_import("pystray"),
         _check_import("PIL"),
-        _check_import("pyautogui"),
         _check_keyring(),
         _check_storage_paths(),
         _check_audio_device(),
