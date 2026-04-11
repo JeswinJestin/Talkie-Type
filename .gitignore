@@ -25,3 +25,5 @@ build/
 dist/
 dist_release/
 *.spec
+
+external/
